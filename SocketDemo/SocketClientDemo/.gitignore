@@ -1,6 +1,7 @@
 
 
 /Debug/
+*.opensdf
 
 # Prerequisites
 *.d
