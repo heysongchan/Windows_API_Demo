@@ -13,9 +13,9 @@ const char* const DEFAULT_PORT = "10000";
 const unsigned MAX_REQUEST = 1024;
 const unsigned BUF_SIZE = 4096;
 
-DWORD WINAPI CommunicationThread(LPVOID lpParameter){
+//具体交互逻辑实现
+DWORD doCommunicate(SOCKET& socket){
 	DWORD dwTid = GetCurrentThreadId();
-	SOCKET socket = (SOCKET)lpParameter;
 	LPSTR szRequest = (LPSTR)malloc(MAX_REQUEST);
 	int iResult, bytesSent;
 	//接收数据
@@ -76,7 +76,7 @@ DWORD WINAPI CommunicationThread(LPVOID lpParameter){
 			CloseHandle(hFile);
 			closesocket(socket);
 		}
-		else if (!strcmp(szRequest,"get info")){
+		else if (!strcmp(szRequest, "get information")){
 			char* msg = "this is infomation!";
 			bytesSent = send(socket, msg, strlen(msg) + 1, 0);
 			if (bytesSent == SOCKET_ERROR){
@@ -95,12 +95,14 @@ DWORD WINAPI CommunicationThread(LPVOID lpParameter){
 	return 0;
 }
 
+DWORD WINAPI CommunicationThread(LPVOID lpParameter){
+	SOCKET socket = (SOCKET)lpParameter;
+	return doCommunicate(socket);
+	
+}
 
 
-
-
-int _tmain(int argc, _TCHAR* argv[])
-{
+int startLocalService(const char* port){
 	WSADATA wsadata;
 	SOCKET ListenSocket = INVALID_SOCKET;
 	SOCKET ClientSocket = INVALID_SOCKET;
@@ -119,7 +121,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	hints.ai_protocol = IPPROTO_TCP;
 	hints.ai_flags = AI_PASSIVE;
 	//
-	iResult = getaddrinfo(NULL, DEFAULT_PORT, &hints, &result);
+	iResult = getaddrinfo(NULL, port, &hints, &result);
 	if (iResult != 0){
 		printf("getaddrinfo error failed:%d \n", iResult);
 		WSACleanup();
@@ -140,9 +142,9 @@ int _tmain(int argc, _TCHAR* argv[])
 		freeaddrinfo(result);
 		closesocket(ListenSocket);
 		WSACleanup();
-		return 1;		
+		return 1;
 	}
-	printf("bind \n"); 
+	printf("bind \n");
 	freeaddrinfo(result);
 	//
 	iResult = listen(ListenSocket, SOMAXCONN);
@@ -155,7 +157,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	}
 	while (1){
 		printf("ready to accept\n");
-		ClientSocket = accept(ListenSocket, NULL, NULL);
+		struct sockaddr sa;
+		memset(&sa, 0, sizeof(sa));
+
+		ClientSocket = accept(ListenSocket, &sa, NULL);
 		printf("accept a connection\n");
 		if (ClientSocket == INVALID_SOCKET){
 			printf("accept failed:%d\n", WSAGetLastError());
@@ -170,5 +175,11 @@ int _tmain(int argc, _TCHAR* argv[])
 	}
 	WSACleanup();
 	return 0;
+}
+
+int _tmain(int argc, _TCHAR* argv[])
+{
+	int ret = startLocalService( DEFAULT_PORT);
+	return ret;
 }
 

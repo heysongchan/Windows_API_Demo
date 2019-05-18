@@ -11,9 +11,19 @@
 const unsigned RECV_BUFFER_SIZE = 8192;
 
 
-//int _tmain(int argc, _TCHAR* argv[])
-int _tmain(int argc, char* argv[])
+enum GETTYPE{ GETFILE, GETPARAM };
+
+int main(int argc, char* argv[])
 {
+	//命令参数如果为-f，则取服务器指定文件下载
+	GETTYPE gettype = GETPARAM;
+	char* filepath = NULL;
+	if (argc == 3){
+		if (!strcmp("-f", argv[1])){
+			gettype = GETFILE;
+			filepath = argv[2];
+		}
+	}
 
 	SOCKADDR_IN clientService;
 	SOCKET connectSocket;
@@ -36,8 +46,8 @@ int _tmain(int argc, char* argv[])
 	}
 	//
 	clientService.sin_family = AF_INET;
-	clientService.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
-	clientService.sin_port = htons(1000);
+	clientService.sin_addr.S_un.S_addr = inet_addr("192.168.0.104");
+	clientService.sin_port = htons(10000);
 	//
 	if (connect(connectSocket, (SOCKADDR*)&clientService, sizeof(clientService)) == SOCKET_ERROR){
 		printf("failed to connect(%d)\n", WSAGetLastError());
@@ -45,9 +55,9 @@ int _tmain(int argc, char* argv[])
 		return 1;
 	}
 	//
-	if (argc == 2 && (!strcmp(argv[1], "-d"))){
+	/*if (argc == 2 && (!strcmp(argv[1], "-d"))){
 		strcpy(sendbuf, "down file");		
-	}
+	}*/
 	bytesSent = send(connectSocket, sendbuf, strlen(sendbuf) + 1, 0);
 	if (bytesSent == SOCKET_ERROR){
 		printf("send error %d\n", WSAGetLastError());
@@ -57,13 +67,14 @@ int _tmain(int argc, char* argv[])
 	printf("bytes sent: %d\n", bytesSent);
 	//接收
 	recvbuf = (char*)malloc(RECV_BUFFER_SIZE);
+	memset(recvbuf, 0, sizeof(recvbuf));
 	while (bytesRecv != SOCKET_ERROR){
 		bytesRecv = recv(connectSocket, recvbuf, RECV_BUFFER_SIZE, 0);
 		if (bytesRecv == 0){
 			printf("connection closed\n");
 			break;
 		}
-		printf("bytes recv:&d\n", bytesRecv);
+		printf("bytes recv: %d     %s\n", bytesRecv, recvbuf);
 	}
 	free(recvbuf);
 	WSACleanup();
